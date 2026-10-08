@@ -1150,44 +1150,9 @@ export function stopCustomAppRecording(): Record<string, unknown> {
   return { ok: true };
 }
 
-export async function cloneCustomAppVoice(app: InstalledCustomApp, record: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const config = resolveCustomAppVoiceConfig(app, record);
-  if (!config) throw new Error("未找到可用语音配置。");
-  if (config.provider !== "Minimax") throw new Error("voice.clone 当前仅支持 Minimax 语音配置。");
-  if (!config.apiKey) throw new Error("Minimax API Key 未配置。");
-  const voiceId = cleanText(record.voiceId, 64);
-  if (!voiceId || !/^[A-Za-z0-9_-]{4,64}$/.test(voiceId)) throw new Error("voice.clone 需要合法 voiceId。");
-  const dataUrl = cleanText(record.audioDataUrl ?? record.dataUrl, 25_000_000);
-  if (!dataUrl) throw new Error("voice.clone 需要 audioDataUrl。");
-  const blob = dataUrlToBlob(dataUrl);
-  const form = new FormData();
-  form.set("apiKey", config.apiKey);
-  form.set("baseUrl", config.baseUrl ?? "");
-  form.set("voiceId", voiceId);
-  form.set("audio", blob, cleanText(record.filename, 120) || "voice-sample.mp3");
-  const response = await fetch("/api/voice/minimax-clone", { method: "POST", body: form });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || data?.ok === false) {
-    throw new Error(cleanText(data?.message ?? data?.error, 500) || `voice.clone 失败 (${response.status})`);
-  }
-  const clonedVoice = {
-    id: voiceId,
-    name: cleanText(record.name ?? record.label, 80) || voiceId,
-    createdAt: Date.now(),
-  };
-  const configs = loadVoiceConfigs();
-  const nextConfigs = configs.map(item => item.id === config.id
-    ? {
-      ...item,
-      customVoices: [
-        clonedVoice,
-        ...(item.customVoices ?? []).filter(voice => voice.id !== voiceId),
-      ],
-      defaultVoice: record.setDefault === true ? voiceId : item.defaultVoice,
-    }
-    : item);
-  saveVoiceConfigs(nextConfigs);
-  return { ok: true, configId: config.id, voiceId, fileId: data?.fileId, voice: clonedVoice };
+export async function cloneCustomAppVoice(_app: InstalledCustomApp, _record: Record<string, unknown>): Promise<Record<string, unknown>> {
+  // 语音功能已在演示版中移除
+  throw new Error("语音功能已移除，无法克隆音色。");
 }
 
 export function readCustomAppCalendar(record: Record<string, unknown>): Record<string, unknown> {
