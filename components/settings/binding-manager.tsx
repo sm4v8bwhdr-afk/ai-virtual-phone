@@ -11,7 +11,6 @@ import {
     Code2,
     Languages,
     Layers,
-    Mic,
     RotateCcw,
     User,
     UserPlus,
@@ -38,7 +37,6 @@ import type {
     CharacterBinding,
     ContentAppId,
     ApiConfig,
-    VoiceApiConfig,
     PresetConfig,
     WorldBookConfig,
     RegexConfig,
@@ -51,7 +49,6 @@ import {
     getCharacterBinding,
     setCharacterBinding,
     loadApiConfigs,
-    loadVoiceConfigs,
     loadPresets,
     loadWorldBooks,
     loadRegexes,
@@ -64,14 +61,13 @@ import { loadCharacters } from "@/lib/character-storage";
 import type { Character } from "@/lib/character-types";
 
 type Level = "global" | "character" | "app";
-type SingleBindingField = "apiConfigId" | "voiceConfigId" | "presetId" | "userIdentityId";
+type SingleBindingField = "apiConfigId" | "presetId" | "userIdentityId";
 type MultiBindingField = "worldBookIds" | "regexIds";
 type BindingField = SingleBindingField | MultiBindingField;
 type AuxBindingField = "memorySummaryApiConfigId" | "embeddingApiConfigId" | "mascotApiConfigId" | "reasoningTranslateApiConfigId" | "qaApiConfigId";
 
 const BINDING_FIELD_VISUALS: Record<BindingField, { icon: LucideIcon; color: string }> = {
     apiConfigId: { icon: Code2, color: BINDING_ACCENTS.api },
-    voiceConfigId: { icon: Mic, color: BINDING_ACCENTS.voice },
     presetId: { icon: Layers, color: BINDING_ACCENTS.preset },
     worldBookIds: { icon: BookOpen, color: BINDING_ACCENTS.worldBook },
     regexIds: { icon: Asterisk, color: BINDING_ACCENTS.regex },
@@ -109,7 +105,6 @@ export function BindingManager() {
     const [config, setConfig] = useState<BindingConfig>({ globalDefaults: {}, characterBindings: [] });
     const [characters, setCharacters] = useState<Character[]>([]);
     const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>([]);
-    const [voiceConfigs, setVoiceConfigs] = useState<VoiceApiConfig[]>([]);
     const [presets, setPresets] = useState<PresetConfig[]>([]);
     const [worldBooks, setWorldBooks] = useState<WorldBookConfig[]>([]);
     const [regexes, setRegexes] = useState<RegexConfig[]>([]);
@@ -127,7 +122,6 @@ export function BindingManager() {
 
     const reloadData = () => {
         setApiConfigs(loadApiConfigs());
-        setVoiceConfigs(loadVoiceConfigs());
         setPresets(loadPresets());
         setWorldBooks(loadWorldBooks());
         setRegexes(loadRegexes());
@@ -171,7 +165,6 @@ export function BindingManager() {
         if (!isLoaded) return;
         const validSets = {
             api: new Set(apiConfigs.map(c => c.id)),
-            voice: new Set(voiceConfigs.map(c => c.id)),
             preset: new Set(presets.map(p => p.id)),
             identity: new Set(identities.map(i => i.id)),
             wb: new Set(worldBooks.map(w => w.id)),
@@ -181,7 +174,6 @@ export function BindingManager() {
             const s = { ...slot };
             let changed = false;
             if (s.apiConfigId && !validSets.api.has(s.apiConfigId)) { s.apiConfigId = undefined; changed = true; }
-            if (s.voiceConfigId && !validSets.voice.has(s.voiceConfigId)) { s.voiceConfigId = undefined; changed = true; }
             if (s.presetId && !validSets.preset.has(s.presetId)) { s.presetId = undefined; changed = true; }
             if (s.userIdentityId && !validSets.identity.has(s.userIdentityId)) { s.userIdentityId = undefined; changed = true; }
             if (s.worldBookIds) {
@@ -247,7 +239,7 @@ export function BindingManager() {
             }
             return prev;
         });
-    }, [isLoaded, apiConfigs, voiceConfigs, presets, worldBooks, regexes, identities]);
+    }, [isLoaded, apiConfigs, presets, worldBooks, regexes, identities]);
 
     // Navigation management
     useEffect(() => {
@@ -319,7 +311,6 @@ export function BindingManager() {
     const mergeSlotInto = (target: BindingSlot, slot?: BindingSlot): BindingSlot => {
         if (!slot) return target;
         if (slot.apiConfigId) target.apiConfigId = slot.apiConfigId;
-        if (slot.voiceConfigId) target.voiceConfigId = slot.voiceConfigId;
         if (slot.presetId) target.presetId = slot.presetId;
         if (slot.userIdentityId) target.userIdentityId = slot.userIdentityId;
         if (slot.worldBookIds && slot.worldBookIds.length > 0) target.worldBookIds = [...slot.worldBookIds];
@@ -362,7 +353,6 @@ export function BindingManager() {
         if (!slot) return 0;
         let count = 0;
         if (slot.apiConfigId) count++;
-        if (slot.voiceConfigId) count++;
         if (slot.presetId) count++;
         if (slot.userIdentityId) count++;
         if (slot.worldBookIds && slot.worldBookIds.length > 0) count++;
@@ -375,7 +365,6 @@ export function BindingManager() {
         if (!binding) return false;
         return Boolean(
             binding.defaults.apiConfigId ||
-            binding.defaults.voiceConfigId ||
             binding.defaults.presetId ||
             binding.defaults.userIdentityId ||
             (binding.defaults.worldBookIds && binding.defaults.worldBookIds.length > 0) ||
@@ -423,7 +412,6 @@ export function BindingManager() {
     const getBindingFieldLabel = (field: BindingField): string => {
         switch (field) {
             case "apiConfigId": return "API 配置";
-            case "voiceConfigId": return "语音 API";
             case "presetId": return "预设";
             case "userIdentityId": return "用户身份";
             case "worldBookIds": return "世界书";
@@ -434,7 +422,6 @@ export function BindingManager() {
     const getBindingFieldDescription = (field: BindingField): string => {
         switch (field) {
             case "apiConfigId": return "全局文本生成接口";
-            case "voiceConfigId": return "全局语音合成接口";
             case "presetId": return "全局提示词预设";
             case "userIdentityId": return "全局用户身份";
             case "worldBookIds": return "全局启用的世界书";
@@ -466,8 +453,6 @@ export function BindingManager() {
         switch (field) {
             case "apiConfigId":
                 return apiConfigs.map(c => ({ id: c.id, name: c.name || c.provider }));
-            case "voiceConfigId":
-                return voiceConfigs.map(c => ({ id: c.id, name: c.name || c.provider }));
             case "presetId":
                 return presets.map(p => ({ id: p.id, name: p.name }));
             case "userIdentityId":
@@ -575,7 +560,7 @@ export function BindingManager() {
         onOpenField: (field: BindingField) => void,
         options?: { includeRegex?: boolean },
     ) => {
-        const primaryFields: BindingField[] = ["apiConfigId", "voiceConfigId"];
+        const primaryFields: BindingField[] = ["apiConfigId"];
         const compactFields: BindingField[] = options?.includeRegex === false
             ? ["presetId", "worldBookIds"]
             : ["presetId", "worldBookIds", "regexIds"];
