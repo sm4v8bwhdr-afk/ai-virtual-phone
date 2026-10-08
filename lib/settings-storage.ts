@@ -1228,3 +1228,45 @@ function migrateLegacyOverrides(): BindingConfig | null {
         return null;
     }
 }
+
+// --- 演示模式（假聊模式）────────────────────────────────────
+// 用户手动开关存在这里；没手动设置过时，按"是否配了可用 API key"自动决定。
+
+const DEMO_MODE_OVERRIDE_KEY = "ai_phone_demo_mode_override_v1";
+
+/** 用户手动设置的演示模式开关；从未设置过返回 null */
+export function loadDemoModeOverride(): boolean | null {
+    if (typeof window === "undefined") return null;
+    try {
+        const raw = kvGet(DEMO_MODE_OVERRIDE_KEY);
+        if (raw === "1") return true;
+        if (raw === "0") return false;
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+export function saveDemoModeOverride(enabled: boolean): void {
+    if (typeof window === "undefined") return;
+    kvSet(DEMO_MODE_OVERRIDE_KEY, enabled ? "1" : "0");
+}
+
+/** 是否有任意一个配了 key 的 API 方案 */
+export function hasAnyApiKeyConfigured(): boolean {
+    try {
+        return loadApiConfigs().some((c) => Boolean(c.apiKey && c.apiKey.trim()));
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * 演示模式是否生效。
+ * 规则：用户手动开/关优先；没手动设置过时，没配任何 API key 则默认开启。
+ */
+export function isDemoModeActive(): boolean {
+    const override = loadDemoModeOverride();
+    if (override !== null) return override;
+    return !hasAnyApiKeyConfigured();
+}
