@@ -5,6 +5,8 @@ import { Plus, RefreshCw, Rss, AlertCircle, FileEdit, Trash2, X, Check } from "l
 import { SettingsContext } from "../phone-settings-app";
 import type { ApiConfig } from "@/lib/settings-types";
 import { loadApiConfigs, removeApiConfigReferences, saveApiConfigs } from "@/lib/settings-storage";
+import { loadDemoModeOverride, saveDemoModeOverride, isDemoModeActive } from "@/lib/settings-storage";
+import { ensureBianaoCharacter } from "@/lib/demo-character";
 import { generateEmbedding, isEmbeddingModelName } from "@/lib/memory-embedding";
 import { ConfirmDialog } from "@/components/ui/modal";
 import { Toggle, Input } from "@/components/ui/form";
@@ -45,6 +47,10 @@ export function ApiSettings() {
     const [isTesting, setIsTesting] = useState<Record<string, boolean>>({});
     const [testResult, setTestResult] = useState<Record<string, { success: boolean; message: string }>>({});
 
+    // ── 演示模式（假聊模式）开关 ──
+    const [demoMode, setDemoMode] = useState<boolean>(false);
+    const [demoModeAuto, setDemoModeAuto] = useState<boolean>(false);
+
     // Load from localStorage on mount
     useEffect(() => {
         const loaded = loadApiConfigs();
@@ -54,7 +60,20 @@ export function ApiSettings() {
             setConfigs(DEFAULT_CONFIGS);
             saveApiConfigs(DEFAULT_CONFIGS);
         }
+        // 演示模式：读手动开关；没手动设置过则按"是否配了 key"自动决定
+        const override = loadDemoModeOverride();
+        setDemoMode(override !== null ? override : isDemoModeActive());
+        setDemoModeAuto(override === null);
+        // 确保默认角色必爱诺存在
+        ensureBianaoCharacter();
         setIsLoaded(true);
+    }, []);
+
+    const toggleDemoMode = useCallback((next: boolean) => {
+        setDemoMode(next);
+        setDemoModeAuto(false);
+        saveDemoModeOverride(next);
+        if (next) ensureBianaoCharacter();
     }, []);
 
     const persist = useCallback((newConfigs: ApiConfig[]) => {
@@ -215,6 +234,22 @@ export function ApiSettings() {
         <div className="flex flex-col gap-6">
             <div className="flex items-center">
                 <h2 className="m-0 mx-2 ts-28 font-bold italic leading-none text-black">API Settings</h2>
+            </div>
+
+            {/* ── 演示模式（假聊模式）开关 ── */}
+            <div className="ui-config-card" style={{ padding: "14px" }}>
+                <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex flex-col gap-1">
+                        <span className="font-bold text-[var(--c-text-title)]">
+                            演示模式{demoModeAuto ? "（自动）" : ""}
+                        </span>
+                        <span className="menu-desc">
+                            不用配 API key 也能聊天，角色会用本地假聊引擎回复（非真 AI）。
+                            {demoModeAuto ? "检测到你还没配 key，已自动开启。" : ""}
+                        </span>
+                    </div>
+                    <Toggle checked={demoMode} onChange={toggleDemoMode} />
+                </div>
             </div>
 
             {configs.length === 0 ? (
